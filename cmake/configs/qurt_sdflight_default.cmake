@@ -34,6 +34,7 @@ set(config_module_list
 	platforms/posix/drivers/df_hmc5883_wrapper
 	platforms/posix/drivers/df_trone_wrapper
 	platforms/posix/drivers/df_isl29501_wrapper
+#	platforms/posix/drivers/df_ltc2946_wrapper
 
 	#
 	# System commands
@@ -109,4 +110,5 @@ set(config_df_driver_list
 	hmc5883
 	trone
 	isl29501
+#	ltc2946
 	)

@@ -1,0 +1,12 @@
+float32 board_voltage
+float32 board_voltage_min
+float32 board_current
+float32 board_total_consumption
+float32 esc_voltage
+float32 esc_voltage_min
+float32 esc_current
+float32 esc_total_consumption
+float32 esc_and_board_consumption
+float32 remain
+uint64 read_counter
+uint64 error_count

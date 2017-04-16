@@ -88,6 +88,7 @@ set(msg_file_names
 	satellite_info.msg
 	sensor_accel.msg
 	sensor_baro.msg
+	sensor_ltc.msg
 	sensor_combined.msg
 	sensor_correction.msg
 	sensor_gyro.msg

@@ -70,6 +70,7 @@
 #include <drivers/drv_adc.h>
 #include <drivers/drv_airspeed.h>
 #include <drivers/drv_px4flow.h>
+#include <drivers/drv_ltc.h>
 
 #include <systemlib/airspeed.h>
 #include <systemlib/systemlib.h>
@@ -173,6 +174,7 @@ private:
 	int		_diff_pres_sub;			/**< raw differential pressure subscription */
 	int		_vcontrol_mode_sub;		/**< vehicle control mode subscription */
 	int 		_params_sub;			/**< notification of parameter updates */
+	int		_ltc_sub;
 
 	orb_advert_t	_sensor_pub;			/**< combined sensor data topic */
 	orb_advert_t	_battery_pub;			/**< battery status */
@@ -489,6 +491,45 @@ Sensors::adc_poll(struct sensor_combined_s &raw)
 		float bat_current_a = 0.0f;
 		bool updated_battery = false;
 
+
+#ifndef __PX4_POSIX_EAGLE
+#define ESC_VOLT_ALIGN 0.13f    // ! NEED TO FIX
+#define ESC_CONSUM_ALIGN -0.053f // ! NEED TO FIX
+
+		bool ltc_updated;
+		orb_check(_ltc_sub, &ltc_updated);
+		if (ltc_updated) {
+			struct ltc_report ltc_report;
+
+			orb_copy(ORB_ID(sensor_ltc), _ltc_sub, &ltc_report);
+			// get bat values
+			bat_voltage_v = ltc_report.esc_voltage + ESC_VOLT_ALIGN;
+			bat_current_a = ltc_report.esc_and_board_consumption + ESC_CONSUM_ALIGN;
+
+//			PX4_ERR("  >>>>>> LTC2946 voltage = %f, current %f",bat_voltage_v, bat_current_a);
+		}
+
+		if (bat_voltage_v > 0.5f) {
+			updated_battery = true;
+		}
+
+		if (_parameters.battery_source == 1 && updated_battery) {
+			actuator_controls_s ctrl;
+			orb_copy(ORB_ID(actuator_controls_0), _actuator_ctrl_0_sub, &ctrl);
+			_battery.updateBatteryStatus(t, bat_voltage_v, bat_current_a, ctrl.control[actuator_controls_s::INDEX_THROTTLE], _armed, &_battery_status);
+
+			/* announce the battery status if needed, just publish else */
+			if (_battery_pub != nullptr) {
+				orb_publish(ORB_ID(battery_status), _battery_pub, &_battery_status);
+
+			} else {
+				_battery_pub = orb_advertise(ORB_ID(battery_status), &_battery_status);
+			}
+		}
+
+		_last_adc = t;
+#endif // __PX4_POSIX_EAGLE
+
 		if (ret >= (int)sizeof(buf_adc[0])) {
 
 			/* Read add channels we got */
@@ -603,6 +644,8 @@ Sensors::task_main()
 
 	_battery.reset(&_battery_status);
 
+	_ltc_sub = orb_subscribe(ORB_ID(sensor_ltc));
+
 	/* get a set of initial values */
 	_voted_sensors_update.sensors_poll(raw);
 
@@ -716,6 +759,8 @@ Sensors::task_main()
 	orb_unsubscribe(_params_sub);
 	orb_unsubscribe(_actuator_ctrl_0_sub);
 	orb_unadvertise(_sensor_pub);
+
+	orb_unsubscribe(_ltc_sub);
 
 	_rc_update.deinit();
 	_voted_sensors_update.deinit();

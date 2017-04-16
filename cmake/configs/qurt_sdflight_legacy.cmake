@@ -30,6 +30,8 @@ set(config_module_list
 	modules/sensors
 	platforms/posix/drivers/df_mpu9250_wrapper
 	platforms/posix/drivers/df_bmp280_wrapper
+	platforms/posix/drivers/df_hmc5883_wrapper
+	platforms/posix/drivers/df_ltc2946_wrapper
 
 	#
 	# System commands
@@ -105,4 +107,6 @@ set(config_module_list
 set(config_df_driver_list
 	mpu9250
 	bmp280
+	hmc5883
+	ltc2946
 	)
